@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>幸運抽獎轉盤</title>
+<style>
+:root{
+  --bg1:#111827;--bg2:#312e81;--card:rgba(255,255,255,.12);
+  --text:#fff;--muted:#cbd5e1;--accent:#fbbf24;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;font-family:"Noto Sans TC","Microsoft JhengHei",sans-serif;color:var(--text);
+  background:radial-gradient(circle at top,#4338ca 0,#1e1b4b 38%,#111827 100%);
+  min-height:100vh;
+}
+header{padding:22px 28px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+h1{margin:0;font-size:clamp(24px,4vw,38px)}
+.header-actions{display:flex;gap:8px;flex-wrap:wrap}
+button,label.btn{
+  border:0;border-radius:12px;padding:11px 16px;font-size:15px;font-weight:700;
+  cursor:pointer;background:#fff;color:#1f2937;box-shadow:0 5px 15px rgba(0,0,0,.18)
+}
+button:hover,label.btn:hover{transform:translateY(-1px)}
+button.primary{background:linear-gradient(135deg,#f59e0b,#fbbf24);color:#422006}
+button.danger{background:#ef4444;color:#fff}
+button.dark{background:#1f2937;color:#fff}
+input[type=file]{display:none}
+.app{max-width:1500px;margin:auto;padding:0 24px 30px;display:grid;grid-template-columns:minmax(360px,1fr) 430px;gap:24px}
+.stage,.panel{
+  background:var(--card);border:1px solid rgba(255,255,255,.15);border-radius:24px;
+  backdrop-filter:blur(12px);box-shadow:0 20px 60px rgba(0,0,0,.22)
+}
+.stage{min-height:720px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;position:relative}
+.wheel-wrap{position:relative;width:min(72vw,650px);aspect-ratio:1}
+#wheel{width:100%;height:100%;border-radius:50%;background:#fff;box-shadow:0 0 0 12px #f8fafc,0 0 0 22px #f59e0b,0 24px 55px rgba(0,0,0,.4);transition:transform 6s cubic-bezier(.12,.78,.12,1)}
+.pointer{
+  position:absolute;left:50%;top:-17px;transform:translateX(-50%);
+  width:0;height:0;border-left:30px solid transparent;border-right:30px solid transparent;border-top:62px solid #ef4444;
+  filter:drop-shadow(0 4px 3px rgba(0,0,0,.35));z-index:3
+}
+.center{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:94px;height:94px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff7c2,#f59e0b 65%,#b45309);
+  border:8px solid white;display:grid;place-items:center;color:#78350f;font-size:18px;font-weight:900;
+  box-shadow:0 8px 18px rgba(0,0,0,.3);z-index:2
+}
+#spinBtn{margin-top:42px;font-size:24px;padding:16px 45px;border-radius:999px}
+.hint{color:var(--muted);margin:14px 0 0;text-align:center}
+.panel{padding:20px;max-height:calc(100vh - 110px);overflow:auto}
+.panel h2{margin:0 0 14px}
+.add-grid{display:grid;grid-template-columns:1fr 100px;gap:8px;margin-bottom:8px}
+input[type=text],input[type=number]{
+  width:100%;padding:11px;border-radius:10px;border:1px solid #cbd5e1;font-size:15px
+}
+.add-actions{display:flex;gap:8px;margin-bottom:18px}
+#totalRate{font-weight:900;margin:10px 0}
+.ok{color:#86efac}.bad{color:#fca5a5}
+.prize-list{display:flex;flex-direction:column;gap:10px}
+.prize{
+  background:rgba(255,255,255,.1);padding:10px;border-radius:15px;display:grid;
+  grid-template-columns:58px 1fr 82px 40px;gap:9px;align-items:center
+}
+.thumb{width:58px;height:58px;border-radius:11px;background:#334155;object-fit:cover}
+.prize-name{font-weight:700}
+.rate-wrap input{padding:8px}
+.icon-btn{padding:8px;border-radius:10px;background:#ffffff22;color:white;box-shadow:none}
+.icon-btn:hover{background:#ffffff33}
+.record{margin-top:20px;border-top:1px solid #ffffff22;padding-top:15px}
+.record-item{font-size:14px;padding:8px 0;border-bottom:1px solid #ffffff15}
+.modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.68);display:none;align-items:center;justify-content:center;
+  z-index:20;padding:20px
+}
+.modal.show{display:flex}
+.result{
+  width:min(460px,95vw);text-align:center;background:linear-gradient(145deg,#312e81,#1e293b);
+  border:2px solid #fbbf24;border-radius:28px;padding:30px;box-shadow:0 25px 80px #0008
+}
+.result img{width:210px;height:210px;object-fit:cover;border-radius:22px;margin:10px auto;display:none}
+.result h2{font-size:28px;margin:10px 0}
+.result-name{font-size:32px;font-weight:900;color:#fde68a;margin:12px}
+.empty-img{width:210px;height:210px;border-radius:22px;margin:10px auto;display:grid;place-items:center;background:#ffffff15;font-size:90px}
+.fullscreen .panel{display:none}
+.fullscreen .app{grid-template-columns:1fr}
+.fullscreen .stage{min-height:calc(100vh - 100px)}
+@media(max-width:980px){.app{grid-template-columns:1fr}.panel{max-height:none}.stage{min-height:auto;padding:42px 16px}.wheel-wrap{width:min(88vw,620px)}}
+@media(max-width:520px){header{padding:16px}.app{padding:0 12px 20px}.add-grid{grid-template-columns:1fr 90px}.prize{grid-template-columns:48px 1fr 72px 36px}.thumb{width:48px;height:48px}}
+
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.12;background-image:radial-gradient(#fff 1px,transparent 1px);background-size:18px 18px;mix-blend-mode:screen}
+.topbar{padding:18px 28px;display:flex;justify-content:space-between;align-items:center;gap:15px;position:relative;z-index:2}
+.brand{font-weight:1000;letter-spacing:2px;font-size:22px;display:flex;align-items:center;gap:8px;text-shadow:0 0 14px #67e8f9}
+.brand small{font-size:11px;letter-spacing:3px;color:#cbd5e1;margin-left:6px}
+.machine{width:min(760px,96%);padding:20px 24px 28px;border-radius:34px;background:linear-gradient(145deg,#334155,#111827 65%);border:5px solid #64748b;box-shadow:inset 0 0 0 3px #0f172a,0 30px 80px #0008,0 0 35px #22d3ee55}
+.machine-title{text-align:center;font-size:19px;font-weight:1000;letter-spacing:5px;color:#fef08a;text-shadow:0 0 10px #f59e0b;margin-bottom:10px}
+.machine-title span{color:#22d3ee}
+.neon-line{height:4px;border-radius:99px;background:linear-gradient(90deg,transparent,#22d3ee,#f472b6,#fbbf24,transparent);box-shadow:0 0 16px #22d3ee;margin-bottom:24px}
+.wheel-wrap{filter:drop-shadow(0 0 18px #22d3ee44)}
+.pointer{border-top-color:#f43f5e;filter:drop-shadow(0 0 10px #fb7185);font-size:45px;color:#fecdd3;width:auto;height:auto;border:0;top:-34px;text-shadow:0 0 12px #fb7185}
+.center{background:radial-gradient(circle,#fef3c7 0,#f59e0b 52%,#7c2d12 100%);border:8px solid #fff;box-shadow:0 0 0 5px #fbbf24,0 0 25px #fbbf24,0 8px 18px #0008;color:#431407;display:flex;flex-direction:column;line-height:1}
+.center b{font-size:17px}.center small{font-size:10px;letter-spacing:2px;margin-top:5px}
+.control-panel{margin-top:24px;padding:14px 20px;border-radius:22px;background:#020617;border:2px solid #475569;box-shadow:inset 0 0 20px #000}
+.lamp-row{display:flex;justify-content:center;gap:16px;margin-bottom:12px}
+.lamp-row i{width:11px;height:11px;border-radius:50%;background:#67e8f9;box-shadow:0 0 12px #67e8f9;animation:blink 1.1s infinite alternate}
+.lamp-row i:nth-child(2){animation-delay:.2s}.lamp-row i:nth-child(3){background:#fbbf24;box-shadow:0 0 12px #fbbf24;animation-delay:.4s}.lamp-row i:nth-child(4){background:#f472b6;box-shadow:0 0 12px #f472b6;animation-delay:.6s}.lamp-row i:nth-child(5){animation-delay:.8s}
+@keyframes blink{to{opacity:.35;transform:scale(.8)}}
+.arcade{width:100%;font-size:23px!important;letter-spacing:2px;padding:15px!important;border-radius:16px!important;box-shadow:0 8px 0 #b45309,0 0 22px #fbbf2488!important}
+.arcade:active{transform:translateY(5px);box-shadow:0 3px 0 #b45309!important}
+.coin-slot{text-align:center;margin-top:13px;color:#94a3b8;font-size:11px;letter-spacing:3px}.coin-slot b{color:#fbbf24}
+.result{background:radial-gradient(circle at top,#4338ca,#111827 72%);border:4px solid #fbbf24;box-shadow:0 0 0 5px #312e81,0 0 50px #fbbf2488,0 30px 100px #000}
+.result:before{content:"★  JACKPOT  ★";display:block;color:#fef08a;letter-spacing:5px;font-weight:1000;font-size:14px}
+.result h2{font-size:30px;text-shadow:0 0 12px #fbbf24}
+.result-name{text-shadow:0 0 15px #fbbf24}
+
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">🕹️ <span>LUCKY GASHAPON</span><small>幸運扭蛋遊戲機</small></div>
+  <div class="header-actions">
+    <button class="dark" id="saveBtn">💾 儲存</button>
+    <button class="dark" id="loadBtn">↩️ 載入</button>
+    <button class="dark" id="fullBtn">⛶ 全螢幕</button>
+  </div>
+</div>
+
+<div class="app">
+  <section class="stage">
+    <div class="machine">
+      <div class="machine-title"><span>★</span> PRIZE MACHINE <span>★</span></div>
+      <div class="neon-line"></div>
+      <div class="wheel-wrap">
+        <div class="pointer">▼</div>
+        <canvas id="wheel" width="900" height="900"></canvas>
+        <div class="center"><b>START</b><small>LUCKY</small></div>
+      </div>
+      <div class="control-panel">
+        <div class="lamp-row"><i></i><i></i><i></i><i></i><i></i></div>
+        <button class="primary arcade" id="spinBtn"><span>▶</span> START DRAW <span>◀</span></button>
+        <div class="coin-slot">🪙 INSERT COIN → <b>FREE PLAY</b></div>
+      </div>
+    </div>
+    <div class="hint">🎯 實際中獎率依設定計算　•　🎁 抽中後顯示扭蛋獎品　•　✨ 建議開啟全螢幕投影</div>
+  </section>
+
+  <aside class="panel">
+    <h2>⚙️ 獎品設定</h2>
+    <div class="add-grid">
+      <input id="newName" type="text" placeholder="獎品名稱，例如：巧克力" />
+      <input id="newRate" type="number" min="0" step="0.1" placeholder="機率%" />
+    </div>
+    <div class="add-actions">
+      <label class="btn">📷 選擇圖片<input id="newImage" type="file" accept="image/*"></label>
+      <button class="primary" id="addBtn">＋新增獎品</button>
+    </div>
+    <div id="totalRate"></div>
+    <div class="prize-list" id="prizeList"></div>
+    <div class="record">
+      <h2>📋 抽獎紀錄</h2>
+      <button id="clearRecord">清除紀錄</button>
+      <div id="recordList"></div>
+    </div>
+  </aside>
+</div>
+
+<div class="modal" id="modal">
+  <div class="result">
+    <h2>🎊 恭喜抽中！</h2>
+    <div class="empty-img" id="resultEmpty">🎁</div>
+    <img id="resultImg" alt="獎品圖片">
+    <div class="result-name" id="resultName"></div>
+    <button class="primary" id="closeModal">🎉 收下獎品！</button>
+  </div>
+</div>
+
+<script>
+const COLORS=['#ef4444','#f97316','#f59e0b','#eab308','#84cc16','#22c55e','#14b8a6','#06b6d4','#0ea5e9','#3b82f6','#6366f1','#8b5cf6','#a855f7','#d946ef','#ec4899','#f43f5e'];
+let prizes = JSON.parse(localStorage.getItem('wheelPrizes')||'null') || [
+  {name:'特別獎 🎁',rate:5,image:''},
+  {name:'巧克力 🍫',rate:15,image:''},
+  {name:'小禮物 🎉',rate:25,image:''},
+  {name:'再接再厲 💪',rate:55,image:''}
+];
+let records=JSON.parse(localStorage.getItem('wheelRecords')||'[]');
+let rotation=0, spinning=false, pendingImage='';
+const canvas=document.getElementById('wheel'),ctx=canvas.getContext('2d');
+const list=document.getElementById('prizeList');
+
+function escapeHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function drawWheel(){
+  const w=canvas.width,h=canvas.height,cx=w/2,cy=h/2,r=w/2-8;
+  ctx.clearRect(0,0,w,h);
+  if(!prizes.length){ctx.fillStyle='#ddd';ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();return}
+  const n=prizes.length,angle=Math.PI*2/n;
+  prizes.forEach((p,i)=>{
+    const a=-Math.PI/2+i*angle;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,a,a+angle);ctx.closePath();
+    ctx.fillStyle=COLORS[i%COLORS.length];ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.8)';ctx.lineWidth=5;ctx.stroke();
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(a+angle/2);
+    ctx.textAlign='right';ctx.fillStyle='white';ctx.font='bold 30px Microsoft JhengHei';
+    const text=p.name.length>12?p.name.slice(0,11)+'…':p.name;
+    ctx.fillText(text,r-35,10);
+    if(p.image){
+      const img=new Image();img.onload=()=>{ctx.save();ctx.beginPath();ctx.arc(cx+(r-115)*Math.cos(angle/2),cy+(r-115)*Math.sin(angle/2),0,0,1);ctx.restore();drawWheel()};
+      // 圖片主要顯示在結果與設定清單，避免 canvas 重複載入造成效能問題
+    }
+    ctx.restore();
+  });
+  ctx.beginPath();ctx.arc(cx,cy,112,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.strokeStyle='#f59e0b';ctx.lineWidth=10;ctx.stroke();
+}
+function render(){
+  drawWheel();
+  const total=prizes.reduce((s,p)=>s+Number(p.rate||0),0);
+  document.getElementById('totalRate').innerHTML=`總中獎率：<span class="${Math.abs(total-100)<0.001?'ok':'bad'}">${total.toFixed(1)}%</span> ${Math.abs(total-100)<0.001?'✅ 可抽獎':'⚠️ 必須等於 100%'}`;
+  list.innerHTML=prizes.map((p,i)=>`
+    <div class="prize">
+      ${p.image?`<img class="thumb" src="${p.image}">`:`<div class="thumb" style="display:grid;place-items:center;font-size:28px">🎁</div>`}
+      <div><input type="text" value="${escapeHtml(p.name)}" data-field="name" data-i="${i}"></div>
+      <div class="rate-wrap"><input type="number" min="0" step="0.1" value="${p.rate}" data-field="rate" data-i="${i}"></div>
+      <button class="icon-btn" data-del="${i}">🗑</button>
+    </div>`).join('');
+  list.querySelectorAll('input').forEach(el=>el.addEventListener('input',()=>{
+    const i=+el.dataset.i,field=el.dataset.field;
+    prizes[i][field]=field==='rate'?Number(el.value):el.value;
+    drawWheel(); updateTotalOnly();
+  }));
+  list.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{prizes.splice(+b.dataset.del,1);render()});
+  renderRecords();
+}
+function updateTotalOnly(){
+  const total=prizes.reduce((s,p)=>s+Number(p.rate||0),0);
+  document.getElementById('totalRate').innerHTML=`總中獎率：<span class="${Math.abs(total-100)<0.001?'ok':'bad'}">${total.toFixed(1)}%</span> ${Math.abs(total-100)<0.001?'✅ 可抽獎':'⚠️ 必須等於 100%'}`;
+}
+function weightedPick(){
+  let r=Math.random()*100,acc=0;
+  for(let i=0;i<prizes.length;i++){acc+=Number(prizes[i].rate);if(r<acc)return i}
+  return prizes.length-1;
+}
+document.getElementById('newImage').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;
+  const reader=new FileReader();reader.onload=()=>pendingImage=reader.result;reader.readAsDataURL(f);
+});
+document.getElementById('addBtn').onclick=()=>{
+  const name=document.getElementById('newName').value.trim(),rate=Number(document.getElementById('newRate').value);
+  if(!name){alert('請輸入獎品名稱');return}
+  prizes.push({name,rate:isNaN(rate)?0:rate,image:pendingImage});
+  document.getElementById('newName').value='';document.getElementById('newRate').value='';document.getElementById('newImage').value='';pendingImage='';render();
+};
+document.getElementById('spinBtn').onclick=()=>{
+  const total=prizes.reduce((s,p)=>s+Number(p.rate||0),0);
+  if(spinning)return;
+  if(!prizes.length){alert('請先新增獎品');return}
+  if(Math.abs(total-100)>0.001){alert('所有獎品的中獎率總和必須等於 100%');return}
+  spinning=true;
+  beep(220,.08,'square',.04);
+  let tick=setInterval(()=>beep(120+Math.random()*260,.025,'square',.012),120);
+  setTimeout(()=>clearInterval(tick),5600);
+  const winner=weightedPick(),n=prizes.length;
+  // 指針固定在正上方。計算讓獲獎扇區中心停在正上方的旋轉角度。
+  const sector=360/n;
+  const centerAngle=winner*sector+sector/2;
+  const target=(360-centerAngle)%360;
+  const current=rotation%360;
+  const delta=(target-current+360)%360;
+  rotation+=360*8+delta;
+  canvas.style.transform=`rotate(${rotation}deg)`;
+  setTimeout(()=>{
+    const p=prizes[winner];
+    records.unshift({name:p.name,time:new Date().toLocaleString('zh-TW')});
+    localStorage.setItem('wheelRecords',JSON.stringify(records.slice(0,100)));
+    renderRecords();
+    document.getElementById('resultName').textContent=p.name;
+    const img=document.getElementById('resultImg'),empty=document.getElementById('resultEmpty');
+    if(p.image){img.src=p.image;img.style.display='block';empty.style.display='none'}else{img.style.display='none';empty.style.display='grid'}
+    document.getElementById('modal').classList.add('show');
+    jackpotSound(); confetti();
+    spinning=false;
+  },6100);
+};
+function renderRecords(){
+  document.getElementById('recordList').innerHTML=records.slice(0,20).map((r,i)=>`<div class="record-item">${i+1}. <b>${escapeHtml(r.name)}</b><br><small>${r.time}</small></div>`).join('')||'<div class="record-item">尚無抽獎紀錄</div>';
+}
+document.getElementById('closeModal').onclick=()=>document.getElementById('modal').classList.remove('show');
+document.getElementById('clearRecord').onclick=()=>{records=[];localStorage.removeItem('wheelRecords');renderRecords()};
+document.getElementById('saveBtn').onclick=()=>{localStorage.setItem('wheelPrizes',JSON.stringify(prizes));alert('設定已儲存！下次開啟仍會保留。')};
+document.getElementById('loadBtn').onclick=()=>{prizes=JSON.parse(localStorage.getItem('wheelPrizes')||'[]');render()};
+document.getElementById('fullBtn').onclick=()=>{
+  document.body.classList.toggle('fullscreen');
+  if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.();
+};
+document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)document.body.classList.remove('fullscreen')});
+render();
+
+let audioCtx;
+function beep(freq=440,duration=.12,type='square',gain=.035){
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+    o.type=type;o.frequency.value=freq;g.gain.value=gain;o.connect(g);g.connect(audioCtx.destination);
+    o.start();g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+duration);o.stop(audioCtx.currentTime+duration);
+  }catch(e){}
+}
+function jackpotSound(){
+  [523,659,784,1047,1319].forEach((f,i)=>setTimeout(()=>beep(f,.18,'square',.05),i*90));
+}
+function confetti(){
+  for(let i=0;i<90;i++){
+    const e=document.createElement('span');
+    e.textContent=['★','✦','●','🎉'][Math.floor(Math.random()*4)];
+    e.style.cssText=`position:fixed;left:${Math.random()*100}vw;top:-30px;font-size:${14+Math.random()*24}px;z-index:99;pointer-events:none;animation:fall ${2+Math.random()*2}s linear forwards`;
+    document.body.appendChild(e);setTimeout(()=>e.remove(),4500);
+  }
+}
+const style=document.createElement('style');style.textContent='@keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}';document.head.appendChild(style);
+
+</script>
+</body>
+</html>
